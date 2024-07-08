@@ -1,0 +1,77 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: morpheus-jupyter
+spec:
+  finally:
+    - name: buildah
+      params:
+        - name: IMAGE
+          value: 'image-registry.openshift-image-registry.svc:5000/ruben-nvidia/morpheus-jupyter:latest'
+        - name: BUILDER_IMAGE
+          value: 'registry.redhat.io/rhel8/buildah@sha256:aac6629389db17e99894c5bee0da01d4c8065d11d8c6f6e1602f9484290baa70'
+        - name: STORAGE_DRIVER
+          value: vfs
+        - name: DOCKERFILE
+          value: ./Dockerfile
+        - name: CONTEXT
+          value: ./experimental/event-driven-rag-cve-analysis
+        - name: TLSVERIFY
+          value: 'true'
+        - name: FORMAT
+          value: docker
+        - name: BUILD_EXTRA_ARGS
+          value: '--build-arg MORPHEUS_CONTAINER=image-registry.openshift-image-registry.svc:5000/ruben-nvidia/morpheus --build-arg MORPHEUS_CONTAINER_VERSION=latest --target=jupyter'
+        - name: PUSH_EXTRA_ARGS
+          value: ''
+        - name: SKIP_PUSH
+          value: 'false'
+      taskRef:
+        kind: ClusterTask
+        name: buildah
+      workspaces:
+        - name: source
+          workspace: morpheus-ws
+  tasks:
+    - name: git-clone
+      params:
+        - name: url
+          value: 'https://github.com/ruromero/GenerativeAIExamples.git'
+        - name: revision
+          value: ocp-build
+        - name: refspec
+          value: ''
+        - name: submodules
+          value: 'true'
+        - name: depth
+          value: '1'
+        - name: sslVerify
+          value: 'true'
+        - name: crtFileName
+          value: ca-bundle.crt
+        - name: subdirectory
+          value: ''
+        - name: sparseCheckoutDirectories
+          value: ''
+        - name: deleteExisting
+          value: 'true'
+        - name: httpProxy
+          value: ''
+        - name: httpsProxy
+          value: ''
+        - name: noProxy
+          value: ''
+        - name: verbose
+          value: 'true'
+        - name: gitInitImage
+          value: 'registry.redhat.io/openshift-pipelines/pipelines-git-init-rhel8@sha256:f5206d183e4bdaa90800f349c6cd6a5ee62741dd944fa34e08c44ec0c125869d'
+        - name: userHome
+          value: /home/git
+      taskRef:
+        kind: ClusterTask
+        name: git-clone
+      workspaces:
+        - name: output
+          workspace: morpheus-ws
+  workspaces:
+    - name: morpheus-ws
